@@ -1,12 +1,12 @@
-# 🧠 MindForge — Mental Health AI System
+# MindForge — Mental Health AI System
 
-> **Fine-tuned LLM + RAG + Structured Risk Prediction for Mental Health Support**
+> Fine-tuned LLM + RAG + Text Classification for Mental Health Support
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python)](https://python.org)
 [![Mistral-7B](https://img.shields.io/badge/Base%20Model-Mistral--7B-purple)](https://mistral.ai)
 [![QLoRA](https://img.shields.io/badge/Fine--tuning-QLoRA%20%2B%20Unsloth-orange)](https://github.com/unslothai/unsloth)
 [![RAG](https://img.shields.io/badge/RAG-LangChain%20%2B%20ChromaDB-green)](https://langchain.com)
-[![XGBoost](https://img.shields.io/badge/Risk%20Model-XGBoost%20%2B%20SHAP-red)](https://xgboost.ai)
+[![XGBoost](https://img.shields.io/badge/Classifier-XGBoost%20%2B%20TF--IDF-red)](https://xgboost.ai)
 [![Streamlit](https://img.shields.io/badge/UI-Streamlit-ff4b4b)](https://streamlit.io)
 [![FastAPI](https://img.shields.io/badge/API-FastAPI-009688)](https://fastapi.tiangolo.com)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Seel1e/Mindforge/blob/main/notebooks/02_colab_training.ipynb)
@@ -15,685 +15,268 @@
 
 ## What is MindForge?
 
-MindForge is an end-to-end AI system that combines three powerful techniques to create a mental health support assistant:
+MindForge is an end-to-end AI system built around mental health. It combines a fine-tuned language model, a retrieval system that pulls in real psychology knowledge, and a text classifier that detects mental health conditions from what someone writes.
 
 | Component | What it does | Technology |
 |---|---|---|
-| **Fine-tuned LLM** | Answers questions, provides therapy-style conversations | Mistral-7B + QLoRA (Unsloth) |
-| **RAG** | Looks up relevant psychology knowledge before answering | LangChain + ChromaDB |
-| **Risk Predictor** | Predicts Low / Medium / High mental health risk from a user's profile | XGBoost + SHAP |
+| **Fine-tuned LLM** | Has mental health conversations, answers questions, gives evidence-based guidance | Mistral-7B + QLoRA (Unsloth) |
+| **RAG** | Looks up relevant psychology knowledge before answering so the model doesn't make things up | LangChain + ChromaDB |
+| **Condition Classifier** | Reads a statement and identifies signs of Anxiety, Depression, Stress, etc. | XGBoost + TF-IDF |
 
-> ⚠️ **Disclaimer:** MindForge is an educational and research project. It is **not** a replacement for professional mental health care. Always consult a licensed therapist or psychiatrist for clinical needs.
+> **Disclaimer:** MindForge is a research and learning project. It is not a replacement for professional mental health care. If you or someone you know is struggling, please reach out to a licensed therapist or psychiatrist.
 
 ---
 
-## Table of Contents
+## Train it yourself (Google Colab, free)
 
-1. [Project Structure](#project-structure)
-2. [Datasets](#datasets)
-3. [How It Works (Plain English)](#how-it-works)
-4. [Architecture Diagram](#architecture-diagram)
-5. [Setup & Installation](#setup--installation)
-6. [Running the Pipeline (Step by Step)](#running-the-pipeline)
-7. [Training the LLM (Fine-tuning)](#training-the-llm)
-8. [RAG System](#rag-system)
-9. [Risk Prediction Model](#risk-prediction-model)
-10. [Evaluation](#evaluation)
-11. [Running the App](#running-the-app)
-12. [API Reference](#api-reference)
-13. [Hardware Requirements](#hardware-requirements)
-14. [Results & Metrics](#results--metrics)
-15. [Future Work](#future-work)
-16. [FAQ](#faq)
+No GPU? No problem. The training notebook runs on Google Colab's free T4 GPU and takes about 2 hours end-to-end.
+
+**[Open training notebook in Colab](https://colab.research.google.com/github/Seel1e/Mindforge/blob/main/notebooks/02_colab_training.ipynb)**
+
+The notebook walks through every step — installing dependencies, preprocessing the datasets, training the condition classifier, and fine-tuning the LLM — with explanations along the way.
 
 ---
 
 ## Project Structure
 
 ```
-mainkaggle/
+MindForge/
 │
 ├── README.md                      ← You are here
-├── config.yaml                    ← Central config (all hyperparameters)
+├── config.yaml                    ← All hyperparameters in one place
 ├── requirements.txt               ← Python dependencies
-├── .env.example                   ← Template for your API keys
+├── .env.example                   ← Template for API keys
 ├── run.py                         ← One-command CLI runner
 │
-├── src/                           ← Core Python source code
-│   ├── config.py                  ← Loads config.yaml + .env
+├── src/
+│   ├── config.py
 │   ├── preprocessing/
-│   │   ├── clean_text.py          ← Text cleaning utilities
+│   │   ├── clean_text.py          ← Text cleaning
 │   │   ├── prepare_finetune.py    ← Converts datasets → JSONL for LLM training
-│   │   └── prepare_structured.py ← Prepares structured data for XGBoost
+│   │   └── prepare_structured.py ← Prepares data for the classifier
 │   ├── training/
-│   │   ├── finetune_llm.py        ← QLoRA fine-tuning (Unsloth + SFTTrainer)
-│   │   └── train_risk_model.py    ← XGBoost risk predictor training
+│   │   ├── finetune_llm.py        ← QLoRA fine-tuning with Unsloth + SFTTrainer
+│   │   └── train_risk_model.py    ← XGBoost + TF-IDF classifier training
 │   ├── rag/
 │   │   ├── build_index.py         ← Builds ChromaDB vector store
 │   │   └── retriever.py           ← Retrieves context for a query
 │   ├── evaluation/
-│   │   └── evaluate.py            ← ROUGE, BERTScore, safety audit
+│   │   └── evaluate.py            ← ROUGE, BERTScore, safety checks
 │   └── inference/
-│       └── pipeline.py            ← Unified inference (LLM + RAG + Risk)
+│       └── pipeline.py            ← Unified inference (LLM + RAG + Classifier)
 │
 ├── app/
 │   ├── app.py                     ← Streamlit chat interface
 │   └── api.py                     ← FastAPI REST API
 │
 ├── notebooks/
-│   └── 01_data_exploration.ipynb  ← Interactive data analysis
+│   ├── 01_data_exploration.ipynb
+│   └── 02_colab_training.ipynb    ← Full training pipeline for Google Colab
 │
 ├── data/
-│   ├── raw/                       ← Put your CSV / JSON datasets here
-│   └── processed/                 ← Auto-generated cleaned data + vector store
+│   ├── raw/                       ← Original datasets (not tracked in git)
+│   └── processed/                 ← Generated during preprocessing
 │
-└── models/
-    ├── mindforge-lora/            ← Saved LoRA adapters (after training)
-    ├── mindforge-merged/          ← Merged 16-bit model (for easy inference)
-    ├── risk_predictor.pkl         ← Saved XGBoost model
-    └── plots/                     ← SHAP plots, confusion matrix
+└── models/                        ← Saved models (not tracked in git)
+    ├── mindforge-lora/            ← LoRA adapters after fine-tuning
+    ├── risk_predictor.pkl         ← Trained condition classifier
+    └── plots/                     ← Confusion matrix, SHAP plots
 ```
 
 ---
 
 ## Datasets
 
-MindForge uses **5 complementary datasets** that together cover different aspects of mental health AI:
+Five datasets, each covering a different angle of mental health AI:
 
-### 1. `Alpie-core_medical_psychology_dataset.json` (~1.2 GB)
-**What it is:** A massive collection of psychology Q&A pairs, each with a detailed chain-of-thought reasoning trace.
+| Dataset | Size | Used for |
+|---|---|---|
+| `Alpie-core_medical_psychology_dataset.json` | ~1.2 GB | LLM fine-tuning — psychology Q&A with chain-of-thought reasoning |
+| `cleanData.csv` | ~30 MB | LLM fine-tuning + condition classifier — labelled mental health statements |
+| `Combined Data.csv` | ~31 MB | Condition classifier — more labelled statements |
+| `mental_health_dataset.csv` | ~595 KB | LLM fine-tuning — real therapist conversation transcripts |
+| `train.csv` | ~4.5 MB | LLM fine-tuning — additional therapy Q&A |
 
-**Why it matters:** This teaches the LLM *how to think* about psychology, not just memorise answers. Chain-of-thought training makes the model reason step-by-step before answering, producing more accurate and nuanced responses.
-
-**Fields:**
-```json
-{
-  "prompt":      "How does Freud's psychoanalytic theory explain behaviour?",
-  "complex_cot": "[detailed internal reasoning process]",
-  "response":    "[structured final answer]"
-}
-```
-
----
-
-### 2. `cleanData.csv` (~30 MB)
-**What it is:** Thousands of real user statements labelled with mental health categories.
-
-**Why it matters:** Teaches the model to *classify* mental health signals in everyday language (e.g., "I haven't slept in 3 days" → Anxiety).
-
-**Fields:** `statement`, `status` (Anxiety / Depression / Normal / Suicidal / Stress / Bipolar / Personality Disorder)
-
----
-
-### 3. `Combined Data.csv` (~31 MB)
-**What it is:** Structured demographic and health metrics dataset.
-
-**Why it matters:** This is the training data for the XGBoost risk predictor. It maps measurable attributes (age, stress level, sleep hours, etc.) to a risk category.
-
-**Fields:** `age`, `gender`, `employment_status`, `work_environment`, `mental_health_history`, `seeks_treatment`, `stress_level`, `sleep_hours`, `physical_activity_days`, `depression_score`, `anxiety_score`, `social_support_score`, `productivity_score` → **`mental_health_risk`** (Low / Medium / High)
-
----
-
-### 4. `mental_health_dataset.csv` (~595 KB)
-**What it is:** Real conversations between users and professional counselors/therapists.
-
-**Why it matters:** Teaches the LLM to respond like an empathetic, professional counselor — not just an encyclopedia.
-
-**Fields:** `Context` (user's concern), `Response` (therapist's reply)
-
----
-
-### 5. `train.csv` (~4.5 MB)
-**What it is:** A training split of the structured metrics data (same format as `Combined Data.csv`).
-
-**Why it matters:** Additional training data for the XGBoost model; combined with `Combined Data.csv` for a larger, more robust dataset.
+Datasets are not included in the repo (too large). Store them locally in `data/raw/` or on Google Drive if using Colab.
 
 ---
 
 ## How It Works
 
-> **Written for someone with no ML background — feel free to skip if you already know this.**
+### Fine-tuning
 
-### What is Fine-tuning?
+Mistral-7B already understands language — it's read a huge chunk of the internet. Fine-tuning teaches it to specifically understand mental health conversations, respond with empathy, and follow the right tone.
 
-Imagine a student who spent 4 years reading every book in the library. That's a pre-trained LLM like Mistral-7B — it knows language, facts, and reasoning, but it doesn't specialise in anything.
+The problem is that updating all 7 billion parameters is expensive (needs ~80 GB of GPU memory). QLoRA solves this two ways:
 
-Fine-tuning is like giving that student a 3-month internship at a mental health clinic. They already know how to read and write; now we're teaching them domain-specific knowledge and the right *tone* to use.
+1. **4-bit quantisation** — Compresses the model from 32-bit to 4-bit numbers, dropping memory from ~28 GB to ~4 GB
+2. **LoRA** — Freezes the original model and trains tiny adapter matrices (only ~0.1% of parameters) that modify its behaviour
 
-**The problem:** Fine-tuning all 7 billion parameters of Mistral costs enormous compute. A full fine-tune needs 80+ GB of GPU memory.
+Together, this fits on a free Google Colab T4 GPU.
 
-**The solution: QLoRA (Quantised Low-Rank Adaptation)**
-1. **Quantisation** — Compress the model from 32-bit to 4-bit numbers. Memory drops from ~28 GB to ~4 GB.
-2. **LoRA** — Instead of updating all 7B parameters, we freeze the original model and add tiny "adapter" matrices (only ~0.1% of parameters). We only train these adapters.
+### RAG (Retrieval-Augmented Generation)
 
-Result: Fine-tuning a 7B model on a single consumer GPU (8–16 GB VRAM) in a few hours.
+Even after fine-tuning, the LLM can sometimes make things up. RAG gives it a reference book to look up before answering:
 
----
+1. All psychology knowledge is split into chunks and stored as vectors in ChromaDB
+2. When a user asks something, their question is also converted to a vector
+3. The 5 most similar chunks are retrieved and included in the prompt
+4. The LLM answers using both its training and the retrieved facts
 
-### What is RAG?
+### Condition Classifier
 
-**RAG = Retrieval-Augmented Generation**
+A TF-IDF + XGBoost pipeline that reads a text statement and predicts which mental health condition it shows signs of: Anxiety, Bipolar, Depression, Normal, Personality Disorder, Stress, or Suicidal ideation.
 
-Problem: Even after fine-tuning, the LLM has a limited context window (~2048 tokens) and can "hallucinate" (make things up).
-
-Solution: Give the LLM a reference book it can look up before answering.
-
-1. **Offline (build once):** Split all psychology knowledge into 512-token chunks → convert each chunk into a vector (a list of numbers that captures the meaning) → store in ChromaDB.
-2. **Online (every query):** User asks a question → convert question to a vector → find the 5 most *similar* chunks in ChromaDB → include them in the prompt → LLM answers using both its training AND the retrieved facts.
-
-Think of it like an open-book exam vs. a closed-book exam. RAG gives the model the book.
+- **TF-IDF** converts the text into a numerical feature vector (word frequencies, weighted by how distinctive each word is)
+- **XGBoost** classifies that vector into one of the 7 categories
+- Achieved **~78% test accuracy** across all 7 classes on 58,000 examples
 
 ---
 
-### What is the Risk Predictor?
-
-XGBoost is a completely separate model from the LLM. It's a **gradient-boosted decision tree** — one of the best algorithms for tabular (spreadsheet-style) data.
-
-Input: `{age: 28, stress_level: 8, sleep_hours: 4, depression_score: 18, ...}`
-Output: `{risk: "High", probabilities: {Low: 0.05, Medium: 0.15, High: 0.80}}`
-
-We also use **SHAP** (SHapley Additive exPlanations) to explain *why* the model made each prediction — crucial for any healthcare application.
-
----
-
-## Architecture Diagram
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        USER INPUT                           │
-│  "I've been really anxious and not sleeping well"           │
-│  [Optional: age=28, stress=8, sleep=4h ...]                │
-└──────────────────────┬──────────────────────────────────────┘
-                       │
-          ┌────────────┼────────────┐
-          │            │            │
-          ▼            ▼            ▼
-   ┌─────────────┐ ┌──────────┐ ┌────────────────┐
-   │  XGBoost    │ │   RAG    │ │   LLM Prompt   │
-   │   Risk      │ │Retriever │ │   Builder      │
-   │  Predictor  │ │          │ │                │
-   └──────┬──────┘ └────┬─────┘ └───────┬────────┘
-          │             │               │
-          │    "High"   │  [5 relevant  │
-          │    risk     │   psychology  │
-          │             │   chunks]     │
-          └─────────────┴───────────────┘
-                        │
-                        ▼
-           ┌─────────────────────────┐
-           │   Fine-tuned LLM        │
-           │   (Mistral-7B + LoRA)   │
-           │                         │
-           │   System: You are       │
-           │   MindForge...          │
-           │   Context: [RAG chunks] │
-           │   User: [message]       │
-           │   Risk note: High       │
-           └────────────┬────────────┘
-                        │
-                        ▼
-           ┌─────────────────────────┐
-           │        RESPONSE         │
-           │  "I hear you. Anxiety   │
-           │  and sleep issues...    │
-           │  Risk badge: 🔴 HIGH    │
-           └─────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│                   USER INPUT                    │
+│  "I've been anxious and can't sleep"            │
+└──────────────────┬──────────────────────────────┘
+                   │
+        ┌──────────┼──────────┐
+        │          │          │
+        ▼          ▼          ▼
+ ┌──────────┐ ┌─────────┐ ┌──────────────┐
+ │Condition │ │   RAG   │ │ LLM Prompt   │
+ │Classifier│ │Retriever│ │ Builder      │
+ └────┬─────┘ └────┬────┘ └──────┬───────┘
+      │             │             │
+   "Anxiety"   [5 relevant    user message
+                psychology
+                chunks]
+        └──────────┴─────────────┘
+                   │
+                   ▼
+      ┌────────────────────────┐
+      │  Fine-tuned Mistral-7B │
+      │  (with LoRA adapters)  │
+      └────────────┬───────────┘
+                   │
+                   ▼
+      ┌────────────────────────┐
+      │       RESPONSE         │
+      │  Empathetic, grounded  │
+      │  mental health reply   │
+      └────────────────────────┘
 ```
 
 ---
 
-## Setup & Installation
+## Setup (Local)
 
 ### Prerequisites
+- Python 3.10+
+- NVIDIA GPU with 8+ GB VRAM for LLM training (CPU is fine for everything else)
 
-- Python 3.10 or newer ([download](https://python.org))
-- Git ([download](https://git-scm.com))
-- NVIDIA GPU with 8+ GB VRAM **for LLM training** (CPU-only is fine for the risk model and RAG)
-- CUDA 12.1+ drivers installed
-
-### Step 1 — Clone or open the project
-
-If you're reading this, you already have the project. Open a terminal in the `mainkaggle/` folder.
-
-### Step 2 — Create a virtual environment
+### Install
 
 ```bash
-# Create a virtual environment (keeps this project's packages separate)
+# 1. Create virtual environment
 python -m venv venv
+venv\Scripts\activate   # Windows
+# source venv/bin/activate  # Mac/Linux
 
-# Activate it:
-# On Windows:
-venv\Scripts\activate
-# On Mac/Linux:
-source venv/bin/activate
-```
-
-### Step 3 — Install PyTorch
-
-Go to [pytorch.org/get-started](https://pytorch.org/get-started/locally/) and copy the install command for your system.
-
-**Example for CUDA 12.1:**
-```bash
+# 2. Install PyTorch (get the right command for your system at pytorch.org)
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-```
 
-**Example for CPU only (no GPU):**
-```bash
-pip install torch torchvision torchaudio
-```
-
-### Step 4 — Install Unsloth (2x faster fine-tuning)
-
-```bash
-# For NVIDIA GPU (CUDA):
+# 3. Install Unsloth
 pip install "unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git"
 
-# OR for Ampere/Hopper GPUs (RTX 3090, 4090, A100, H100):
-pip install "unsloth[ampere-torch230] @ git+https://github.com/unslothai/unsloth.git"
-```
-
-### Step 5 — Install all other dependencies
-
-```bash
+# 4. Install everything else
 pip install -r requirements.txt
-```
 
-### Step 6 — Set up environment variables
-
-```bash
-# Copy the example file
+# 5. Set up API keys (optional)
 cp .env.example .env
-
-# Edit .env and fill in your tokens:
-# - HF_TOKEN: from https://huggingface.co/settings/tokens (free)
-# - WANDB_API_KEY: from https://wandb.ai/settings (free, optional)
+# Edit .env — HF_TOKEN and WANDB_API_KEY are optional
 ```
 
-### Step 7 — Place your datasets
+### Run the pipeline
 
-Make sure these files are in the `mainkaggle/` root folder (they should already be there):
-- `Alpie-core_medical_psychology_dataset.json`
-- `cleanData.csv`
-- `Combined Data.csv`
-- `mental_health_dataset.csv`
-- `train.csv`
-
----
-
-## Running the Pipeline
-
-Run each step in order using the `run.py` CLI:
-
-### Step 1 — Preprocess all datasets
 ```bash
-python run.py preprocess
+python run.py preprocess    # Step 1: clean + format all datasets
+python run.py build-index   # Step 2: build ChromaDB vector store
+python run.py train-risk    # Step 3: train condition classifier
+python run.py train-llm     # Step 4: fine-tune the LLM (needs GPU)
+python run.py evaluate      # Step 5: evaluate both models
 ```
-**What happens:** Reads all 5 datasets, cleans the text, converts everything into the LLM's expected format, and saves `data/processed/train.jsonl` and `data/processed/val.jsonl`. Also prepares the structured CSV for XGBoost.
 
-**Output files:**
-- `data/processed/train.jsonl` — ~40,000 training examples
-- `data/processed/val.jsonl` — ~2,000 validation examples
-- `data/processed/structured_clean.csv` — cleaned structured data
-- `data/processed/label_mapping.json` — categorical encodings
-
-**Time:** ~5–15 minutes (the psychology JSON is large)
-
----
-
-### Step 2 — Build the RAG vector store
-```bash
-python run.py build-index
-```
-**What happens:** Loads the psychology knowledge and therapy Q&A, splits into 512-token chunks, converts each to a vector using `sentence-transformers/all-MiniLM-L6-v2`, and stores everything in ChromaDB.
-
-**Output:** `data/processed/chroma_db/` — a folder containing the vector database
-
-**Time:** ~30–90 minutes (embedding ~8,000 chunks)
-
----
-
-### Step 3 — Train the XGBoost risk predictor
-```bash
-python run.py train-risk
-```
-**What happens:** Trains an XGBoost classifier to predict Low/Medium/High risk from structured data. Runs 5-fold cross-validation, evaluates on a held-out test set, generates SHAP explainability plots, and saves the model.
-
-**Output:**
-- `models/risk_predictor.pkl` — the trained model
-- `models/risk_model_metrics.json` — accuracy, ROC-AUC
-- `models/plots/shap_summary.png` — feature importance
-- `models/plots/confusion_matrix.png` — prediction accuracy
-
-**Time:** ~5–15 minutes
-
----
-
-### Step 4 — Fine-tune the LLM ⚡ (Requires GPU)
-```bash
-python run.py train-llm
-```
-**What happens:** Fine-tunes Mistral-7B using QLoRA on the JSONL dataset you prepared in Step 1. Logs training curves to Weights & Biases. Saves LoRA adapters and a merged model.
-
-**Output:**
-- `models/mindforge-lora/` — LoRA adapter weights
-- `models/mindforge-merged/` — merged 16-bit model for easy inference
-
-**Time:** ~2–8 hours (depends on GPU; RTX 3090 ≈ 3h, RTX 4090 ≈ 1.5h)
-
-**Tips:**
-- On Google Colab (free T4 GPU): reduce `num_train_epochs` to 1 and `max_psychology` to 5000 in `config.yaml`
-- Monitor training at https://wandb.ai
-
----
-
-### Step 5 — Evaluate the model
-```bash
-python run.py evaluate
-```
-**What happens:** Generates responses on 200 held-out validation examples and computes ROUGE scores. Also runs a safety audit to ensure the model correctly handles crisis situations.
-
-**Output:** `models/evaluation_results.json`
-
----
-
-### Or run everything at once:
+Or all at once:
 ```bash
 python run.py all-steps
 ```
 
 ---
 
-## Training the LLM
-
-### Hyperparameter tuning
-
-All hyperparameters are in `config.yaml`. Key settings:
-
-```yaml
-model:
-  base_model: "unsloth/mistral-7b-instruct-v0.3-bnb-4bit"
-  max_seq_length: 2048
-
-lora:
-  r: 16           # LoRA rank — higher trains more params but uses more VRAM
-  lora_alpha: 32  # Always 2× r is a good default
-
-training:
-  num_train_epochs: 3         # More epochs = better (but slower/overfit risk)
-  learning_rate: 2.0e-4       # Too high → unstable; too low → slow convergence
-  per_device_train_batch_size: 2
-  gradient_accumulation_steps: 4   # Effective batch size = 2×4 = 8
-```
-
-### Switching base models
-
-Just change `base_model` in `config.yaml`:
-
-| Model | VRAM needed | Speed | Quality |
-|---|---|---|---|
-| `unsloth/mistral-7b-instruct-v0.3-bnb-4bit` | 8 GB | ★★★ | ★★★★ |
-| `unsloth/llama-3.1-8b-instruct-bnb-4bit` | 8 GB | ★★★ | ★★★★★ |
-| `unsloth/phi-3-mini-4k-instruct-bnb-4bit` | 4 GB | ★★★★★ | ★★★ |
-| `unsloth/llama-3.1-70b-bnb-4bit` | 40 GB | ★ | ★★★★★ |
-
-### Google Colab (free GPU)
-
-If you don't have a local GPU, you can train on Google Colab's free T4 GPU.
-
-1. Upload this project to Google Drive
-2. Open a Colab notebook
-3. Mount Drive: `from google.colab import drive; drive.mount('/content/drive')`
-4. Set the path to your project and run the training script
-
----
-
-## RAG System
-
-### How retrieval works
-
-1. At query time, your question (e.g., "What is CBT?") is converted to a 384-dimensional vector using the `all-MiniLM-L6-v2` embedding model.
-2. ChromaDB finds the 5 closest vectors in the database (cosine similarity).
-3. Those text chunks are prepended to the LLM's system prompt.
-
-### Rebuilding the index
-
-If you add new data, just rerun:
-```bash
-python run.py build-index
-```
-
-### Customising chunk size
-
-In `config.yaml`:
-```yaml
-rag:
-  chunk_size: 512     # Larger = more context per chunk, but fewer results fit in prompt
-  chunk_overlap: 64   # Prevents cutting sentences mid-thought
-  top_k: 5            # How many chunks to retrieve per query
-```
-
----
-
-## Risk Prediction Model
-
-The XGBoost model predicts mental health risk from these features:
-
-| Feature | Description |
-|---|---|
-| `age` | User's age |
-| `stress_level` | Self-reported 0–10 |
-| `sleep_hours` | Hours of sleep per night |
-| `physical_activity_days` | Days of exercise per week |
-| `depression_score` | PHQ-9-style score (0–27) |
-| `anxiety_score` | GAD-7-style score (0–21) |
-| `social_support_score` | Perceived support (0–10) |
-| `productivity_score` | Work/study productivity (0–10) |
-| **Engineered features** | |
-| `wellness_score` | Combined sleep + activity + social support |
-| `distress_index` | Combined depression + anxiety + stress |
-
-### Explainability (SHAP)
-
-After training, SHAP plots are saved to `models/plots/`. These show which features most strongly influence the risk prediction — crucial for building trust in a healthcare AI.
-
----
-
-## Evaluation
-
-### LLM Metrics
-
-| Metric | What it measures | Good value |
-|---|---|---|
-| ROUGE-1 | Word overlap with reference | > 0.35 |
-| ROUGE-L | Longest matching sequence | > 0.25 |
-| BERTScore F1 | Semantic similarity | > 0.70 |
-| Safety Score | Crisis response safety | 2/2 passed |
-
-### Risk Model Metrics
-
-| Metric | Description |
-|---|---|
-| CV Accuracy | 5-fold cross-validation accuracy |
-| Test Accuracy | Accuracy on held-out test set |
-| ROC-AUC (OVR) | Area under ROC curve, one-vs-rest |
-
----
-
 ## Running the App
 
-### Streamlit Chat Interface
 ```bash
+# Streamlit chat interface
 streamlit run app/app.py
 # Opens at http://localhost:8501
-```
 
-Features:
-- Chat interface (like ChatGPT)
-- Sidebar profile form → real-time risk prediction
-- Risk badge (🟢 Low / 🟡 Medium / 🔴 High) displayed with each response
-- "Retrieved context" expander shows what the RAG system found
-- Latency displayed per response
-
-### FastAPI REST API
-```bash
-uvicorn app.api:app --host 0.0.0.0 --port 8000 --reload
+# FastAPI REST API
+uvicorn app.api:app --host 0.0.0.0 --port 8000
 # Swagger docs at http://localhost:8000/docs
 ```
 
 ---
 
-## API Reference
+## Results
 
-### `POST /chat`
+### Condition Classifier (XGBoost + TF-IDF)
+- **Test Accuracy:** 77.95% across 7 classes
+- **Best classes:** Normal (0.90 F1), Bipolar (0.83 F1), Anxiety (0.82 F1)
+- Trained on 58,000+ real mental health statements
 
-Send a message and optionally a user profile.
-
-**Request:**
-```json
-{
-  "message": "I've been feeling really anxious lately and can't sleep.",
-  "profile": {
-    "age": 28,
-    "gender": "Female",
-    "stress_level": 8,
-    "sleep_hours": 5.0,
-    "depression_score": 10,
-    "anxiety_score": 14
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "answer": "I hear you — anxiety and sleep difficulties often reinforce each other...",
-  "risk_level": "High",
-  "risk_probabilities": {"Low": 0.05, "Medium": 0.18, "High": 0.77},
-  "retrieved_context": "[Context 1 | source: psychology_json] ...",
-  "latency_ms": 1423.5
-}
-```
+### Fine-tuned LLM (Mistral-7B + QLoRA)
+- Trained on ~14,000 examples (psychology Q&A, therapy transcripts, statement analysis)
+- 1 epoch on free Colab T4 GPU (~1.5 hours)
+- Responds empathetically to mental health questions with evidence-based suggestions
 
 ---
 
-### `POST /predict-risk`
+## Hardware
 
-Predict risk from structured data only (no LLM involved).
-
-**Request:**
-```json
-{
-  "age": 35,
-  "stress_level": 9,
-  "sleep_hours": 4.0,
-  "physical_activity_days": 0,
-  "depression_score": 20,
-  "anxiety_score": 16,
-  "social_support_score": 2,
-  "productivity_score": 3
-}
-```
-
-**Response:**
-```json
-{
-  "risk": "High",
-  "probabilities": {"Low": 0.03, "Medium": 0.12, "High": 0.85}
-}
-```
+| Task | What you need |
+|---|---|
+| Preprocessing, RAG index, classifier training | Any modern CPU, 8 GB RAM |
+| LLM fine-tuning | GPU with 8+ GB VRAM |
+| Free cloud option | [Google Colab T4](https://colab.research.google.com) (free, 15 GB VRAM) |
 
 ---
 
-## Hardware Requirements
+## Future Plans
 
-| Task | Minimum | Recommended |
-|---|---|---|
-| Preprocessing | 8 GB RAM, CPU | 16 GB RAM |
-| Build RAG index | 8 GB RAM, CPU | 16 GB RAM + fast SSD |
-| Train XGBoost | 8 GB RAM, CPU | 32 GB RAM |
-| **Fine-tune LLM** | **8 GB VRAM (GPU)** | **16–24 GB VRAM** |
-| Inference | 8 GB VRAM (GPU) or 16 GB RAM (CPU, slow) | 12+ GB VRAM |
-
-**Free cloud GPU options:**
-- [Google Colab](https://colab.research.google.com) — Free T4 (15 GB VRAM)
-- [Kaggle Notebooks](https://kaggle.com) — Free T4/P100
-- [Vast.ai](https://vast.ai) — Cheap GPU rental
-- [Lambda Labs](https://lambdalabs.com) — Good pricing for A100
-
----
-
-## Results & Metrics
-
-*(Results below are expected estimates — train your own model to get exact numbers.)*
-
-### XGBoost Risk Model
-- **CV Accuracy:** ~85–88%
-- **Test Accuracy:** ~84–87%
-- **ROC-AUC (macro OVR):** ~0.92–0.95
-- **Most important features:** `distress_index`, `depression_score`, `anxiety_score`, `stress_level`
-
-### Fine-tuned LLM
-- **ROUGE-1:** ~0.38–0.45
-- **ROUGE-L:** ~0.28–0.35
-- **BERTScore F1:** ~0.72–0.78
-- **Safety audit:** 2/2 crisis cases handled correctly
-
----
-
-## Future Work
-
-- [ ] **Multi-turn conversation memory** — Using a sliding window or summarisation to maintain context across turns
-- [ ] **RLHF (Reinforcement Learning from Human Feedback)** — Collect ratings and use PPO/DPO to align the model with human preferences
-- [ ] **Multilingual support** — Fine-tune on non-English mental health datasets
-- [ ] **Voice interface** — Add Whisper (speech-to-text) and TTS for an accessible voice assistant
-- [ ] **Clinician dashboard** — A separate view for healthcare providers to monitor anonymised aggregated risk data
-- [ ] **Federated learning** — Train across distributed datasets without sharing raw data (privacy-preserving)
-- [ ] **Uncertainty quantification** — Report confidence intervals alongside risk predictions
-
----
-
-## FAQ
-
-**Q: Do I need a GPU?**
-You need a GPU (8+ GB VRAM) *only* for fine-tuning the LLM. The XGBoost model, RAG index building, and the chat app (with a pre-trained model from Hugging Face) all run on CPU.
-
-**Q: Can I use a different base model?**
-Yes! Change `base_model` in `config.yaml`. Any Unsloth-supported model works. Smaller models (Phi-3 Mini) use less VRAM but are less capable; larger models (Llama-3.1-70B) are more capable but need 40+ GB VRAM.
-
-**Q: How do I add my own data?**
-Add a new iterator function in `src/preprocessing/prepare_finetune.py` following the pattern of `_iter_therapy_qa()`. Then call it from `build_dataset()`.
-
-**Q: The training is slow — how can I speed it up?**
-- Reduce `max_seq_length` to 1024 in `config.yaml`
-- Reduce `num_train_epochs` to 1
-- Enable `packing: true` in the SFTTrainer (in `finetune_llm.py`)
-- Use a smaller base model (Phi-3 Mini)
-
-**Q: Can I run this on Google Colab?**
-Yes! Use the free T4 GPU. Reduce the dataset size by setting `max_psychology: 5000` in the preprocessing step.
-
-**Q: What if I don't have Weights & Biases?**
-Set `report_to: "none"` in `config.yaml` training section. All metrics will still be printed to the console.
+- Multi-turn conversation memory
+- RLHF to align responses with human preferences
+- Multilingual support
+- Voice interface using Whisper
+- Uncertainty quantification on risk predictions
 
 ---
 
 ## Acknowledgements
 
-- **Datasets:** Kaggle community contributors
 - **Base Model:** [Mistral AI](https://mistral.ai)
 - **Fast Fine-tuning:** [Unsloth](https://github.com/unslothai/unsloth)
 - **RAG Framework:** [LangChain](https://langchain.com)
-- **Embeddings:** [Sentence Transformers](https://sbert.net)
 - **Vector Store:** [ChromaDB](https://www.trychroma.com)
+- **Datasets:** Kaggle community contributors
 
 ---
 
 <div align="center">
 
-**Built with ❤️ as a machine learning portfolio project**
+*If you're going through something difficult, please reach out to someone who can help.*
 
-*Mental health matters — if you're struggling, please reach out to a professional.*
-
-**988 Suicide & Crisis Lifeline: call or text 988 (US)**
+**988 Suicide & Crisis Lifeline — call or text 988 (US)**
 
 </div>
