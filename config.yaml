@@ -1,0 +1,105 @@
+# ============================================================
+#  MindForge — Mental Health AI System
+#  Central Configuration File
+# ============================================================
+
+# ── Data paths ───────────────────────────────────────────────
+data:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  datasets:
+    psychology_json: "Alpie-core_medical_psychology_dataset.json"
+    clean_statements: "cleanData.csv"
+    combined_metrics: "Combined Data.csv"
+    therapy_qa: "mental_health_dataset.csv"
+    risk_train: "train.csv"
+
+# ── Base LLM (the model we fine-tune) ────────────────────────
+model:
+  base_model: "unsloth/mistral-7b-instruct-v0.3-bnb-4bit"  # 4-bit quantised — fits 8 GB VRAM
+  # Alternatives (uncomment to swap):
+  # base_model: "unsloth/llama-3.1-8b-instruct-bnb-4bit"
+  # base_model: "unsloth/phi-3-mini-4k-instruct-bnb-4bit"  # lighter, for 4 GB VRAM
+  max_seq_length: 2048
+  dtype: "float16"
+  load_in_4bit: true
+
+# ── LoRA / QLoRA hyper-parameters ────────────────────────────
+lora:
+  r: 16                  # rank — higher = more parameters trained
+  lora_alpha: 32         # scaling factor
+  lora_dropout: 0.05
+  target_modules:
+    - "q_proj"
+    - "k_proj"
+    - "v_proj"
+    - "o_proj"
+    - "gate_proj"
+    - "up_proj"
+    - "down_proj"
+  bias: "none"
+  use_gradient_checkpointing: true
+
+# ── Training hyper-parameters ─────────────────────────────────
+training:
+  output_dir: "models/mindforge-lora"
+  num_train_epochs: 3
+  per_device_train_batch_size: 2
+  gradient_accumulation_steps: 4   # effective batch = 2×4 = 8
+  warmup_steps: 100
+  learning_rate: 2.0e-4
+  weight_decay: 0.01
+  lr_scheduler_type: "cosine"
+  fp16: true
+  logging_steps: 25
+  save_steps: 200
+  eval_steps: 200
+  save_total_limit: 3
+  evaluation_strategy: "steps"
+  load_best_model_at_end: true
+  report_to: "wandb"              # set to "none" if you don't want Weights & Biases
+  run_name: "mindforge-v1"
+  seed: 42
+
+# ── RAG (Retrieval-Augmented Generation) ─────────────────────
+rag:
+  embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
+  vector_store_dir: "data/processed/chroma_db"
+  collection_name: "psychology_knowledge"
+  chunk_size: 512
+  chunk_overlap: 64
+  top_k: 5                        # how many chunks to retrieve per query
+  similarity_threshold: 0.4
+
+# ── Risk Prediction (XGBoost) ────────────────────────────────
+risk_model:
+  output_path: "models/risk_predictor.pkl"
+  test_size: 0.2
+  cv_folds: 5
+  xgb_params:
+    n_estimators: 500
+    max_depth: 6
+    learning_rate: 0.05
+    subsample: 0.8
+    colsample_bytree: 0.8
+    use_label_encoder: false
+    eval_metric: "mlogloss"
+    random_state: 42
+    n_jobs: -1
+
+# ── Inference pipeline ────────────────────────────────────────
+inference:
+  fine_tuned_model_dir: "models/mindforge-lora"
+  max_new_tokens: 512
+  temperature: 0.7
+  top_p: 0.9
+  repetition_penalty: 1.1
+  use_rag: true
+  use_risk_model: true
+
+# ── App ──────────────────────────────────────────────────────
+app:
+  title: "MindForge — Mental Health AI"
+  port: 8501
+  api_port: 8000
+  theme: "dark"
