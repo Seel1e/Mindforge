@@ -8,7 +8,7 @@ Run with:
   uvicorn app.api:app --host 0.0.0.0 --port 8000 --reload
 
 Endpoints:
-  POST /chat          → Send a message, get a response
+  POST /chat          → Send a message and get a response
   POST /predict-risk  → Get risk prediction from structured data
   GET  /health        → Health check
   GET  /docs          → Swagger UI (auto-generated)
