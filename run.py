@@ -2,7 +2,6 @@
 run.py
 ───────
 One-file command-line runner for MindForge.
-Makes it easy for beginners to run any step with one command.
 
 Usage examples:
   python run.py preprocess          # Step 1: prepare datasets
