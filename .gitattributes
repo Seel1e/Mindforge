@@ -1,0 +1,8 @@
+# Keep notebooks with LF line endings (CRLF breaks JSON parsing on GitHub)
+*.ipynb text eol=lf
+
+# Python files
+*.py text eol=lf
+
+# Everything else — auto
+* text=auto
